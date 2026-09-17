@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.0.1
+
+- Das Plugin liegt jetzt im Wurzelverzeichnis des Repositorys statt unter
+  `plugins/<name>/`: Ein Repository ist ein Plugin. Am Code ändert sich nichts;
+  die Plugin-Datei enthält die zusammengeführte README und hat deshalb einen
+  neuen Fingerabdruck.
+
 ## 1.0.0
 
 - Erste Fassung als Sandbox-Plugin, abgelöst vom Workflow-Plugin

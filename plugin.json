@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "organisation.document-classification",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Belegklassifikation",
   "description": "Ordnet Belege anhand der je Umgebung gepflegten Belegarten zu und schlägt neue Belegarten vor – mit der KI-Anbindung Ihrer Umgebung.",
   "kind": "extension",
