@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "id": "organisation.document-classification",
+  "version": "1.0.0",
+  "name": "Belegklassifikation",
+  "description": "Ordnet Belege anhand der je Umgebung gepflegten Belegarten zu und schlägt neue Belegarten vor – mit der KI-Anbindung Ihrer Umgebung.",
+  "kind": "extension",
+  "runtime": {
+    "type": "sandbox",
+    "sdk": "^1.1"
+  },
+  "appearance": {
+    "color": "#2563EB"
+  },
+  "provides": [
+    {
+      "category": "documents.classification",
+      "contractVersion": "1.0"
+    }
+  ],
+  "tags": ["Dokumente", "KI", "Buchhaltung"],
+  "aiProvider": {
+    "required": true,
+    "purpose": "Belegtexte anhand Ihrer Belegarten und Erkennungshinweise einer Belegart zuordnen und neue Belegarten vorschlagen.",
+    "scope": "environment"
+  },
+  "objects": [
+    {
+      "key": "document-types",
+      "name": "Belegart",
+      "pluralName": "Belegarten",
+      "description": "Fachliche Belegarten und Hinweise, woran die KI sie erkennt.",
+      "scope": "environment",
+      "rules": {
+        "titleField": "name",
+        "identifierFrom": "name",
+        "allowDisable": true,
+        "maximumItems": 200
+      },
+      "fields": [
+        {
+          "key": "name",
+          "name": "Bezeichnung",
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "validation": { "minLength": 2, "maxLength": 80 }
+        },
+        {
+          "key": "description",
+          "name": "Beschreibung",
+          "type": "text",
+          "validation": { "maxLength": 500 }
+        },
+        {
+          "key": "hint",
+          "name": "Erkennungshinweis",
+          "description": "Woran die KI diese Belegart erkennt, z. B. typische Begriffe, Absender oder Pflichtangaben.",
+          "type": "text",
+          "validation": { "maxLength": 1000 }
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "document-types.read",
+      "name": "Belegarten lesen",
+      "description": "Liefert die aktiven Belegarten dieser Umgebung mit Beschreibung und Erkennungshinweis.",
+      "effect": "read",
+      "objects": ["document-types"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "documentTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": { "type": "string" },
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "hint": { "type": "string" }
+              },
+              "required": ["slug", "name", "description", "hint"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["documentTypes"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "documents.classify",
+      "name": "Beleg klassifizieren",
+      "description": "Ordnet einen Belegtext oder eine Textdatei (TXT, XML wie XRechnung, CSV, JSON) einer aktiven Belegart zu. Passt keine, ist die Kennung leer.",
+      "effect": "read",
+      "objects": ["document-types"],
+      "ai": true,
+      "fileInputs": ["documentFile"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentText": {
+            "type": "string",
+            "title": "Belegtext",
+            "description": "Der Text des Belegs. Alternativ eine Datei in documentFile.",
+            "maxLength": 200000
+          },
+          "documentFile": {
+            "type": "string",
+            "title": "Belegdatei",
+            "description": "Eine Textdatei des Belegs (TXT, XML, CSV, JSON). PDF und Bilder brauchen eine vorgelagerte Texterkennung."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "documentType": { "type": "string", "description": "Kennung der Belegart, leer wenn keine passt." },
+          "name": { "type": "string", "description": "Bezeichnung der Belegart, leer wenn keine passt." },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "reason": { "type": "string" },
+          "truncated": { "type": "boolean", "description": "Der Belegtext war zu lang und wurde gekürzt übergeben." }
+        },
+        "required": ["documentType", "name", "confidence", "reason", "truncated"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "document-types.suggest",
+      "name": "Belegart vorschlagen",
+      "description": "Schlägt zu einem Beleg eine neue Belegart vor. Nur ein Vorschlag zur manuellen Prüfung – es wird nichts gespeichert.",
+      "effect": "read",
+      "objects": ["document-types"],
+      "ai": true,
+      "fileInputs": ["documentFile"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentText": {
+            "type": "string",
+            "title": "Belegtext",
+            "description": "Der Text des Belegs. Alternativ eine Datei in documentFile.",
+            "maxLength": 200000
+          },
+          "documentFile": {
+            "type": "string",
+            "title": "Belegdatei",
+            "description": "Eine Textdatei des Belegs (TXT, XML, CSV, JSON)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "hint": { "type": "string" },
+          "existingType": { "type": "string", "description": "Kennung einer vorhandenen Belegart, die bereits passt – leer, wenn der Vorschlag neu ist." },
+          "truncated": { "type": "boolean" }
+        },
+        "required": ["slug", "name", "description", "hint", "existingType", "truncated"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
